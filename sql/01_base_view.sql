@@ -1,6 +1,3 @@
-BASE VIEW
------------
-
 CREATE VIEW v_orders_complete
 AS
 WITH payments_agg
