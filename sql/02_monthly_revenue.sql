@@ -1,5 +1,3 @@
-Monthly Revenue 
-  ---
 SELECT date_trunc('month'::TEXT, order_date) AS month
 	,customer_state
 	,sum(order_revenue) AS total_revenue
