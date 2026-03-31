@@ -1,3 +1,5 @@
+CREATE VIEW v_delivery_satisfaction
+AS
 SELECT customer_state
 	,CASE 
 		WHEN delivered_date <= estimated_delivery_date
