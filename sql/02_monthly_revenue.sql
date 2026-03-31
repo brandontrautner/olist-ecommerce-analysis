@@ -1,3 +1,5 @@
+CREATE VIEW v_monthly_revenue
+AS	
 SELECT date_trunc('month'::TEXT, order_date) AS month
 	,customer_state
 	,sum(order_revenue) AS total_revenue
