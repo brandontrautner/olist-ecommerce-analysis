@@ -1,3 +1,5 @@
+CREATE VIEW v_master_dashboard
+AS
 SELECT order_id
 	,customer_id
 	,customer_state
