@@ -1,102 +1,139 @@
 # Olist Brazilian E-Commerce Analysis
-## **Overview**
-Having worked in the e-commerce industry, I wanted to apply data analytics to a domain I understand firsthand, analyzing large volumes of transaction data to identify actionable insights that can drive future strategy and resource allocation.
 
-This project uses the [Brazilian E-Commerce Public Dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce) by Olist, sourced from Kaggle, with 100,000+ orders from 2016–2018 across 9 relational tables covering the full customer journey from purchase through delivery and review.
+A data analytics project exploring 100,000+ Brazilian e-commerce orders from the [Olist public dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce). Built a clean analytical layer from 9 raw tables using PostgreSQL, Python, and Tableau to uncover insights around revenue growth, delivery performance, and regional demand.
 
-Live Dashboard: [View on Tableau Public](https://public.tableau.com/views/OlistBrazilianE-CommerceAnalysis/OverviewDashboard?:language=en-US&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link)
-</br>
+**Live dashboard:** [View on Tableau Public](https://public.tableau.com/views/OlistBrazilianE-CommerceAnalysis/OverviewDashboard?:language=en-US&:sid=&:redirect=auth&:display_count=n&:origin=viz_share_link)
+
 ---
-### Tech Stack
 
-* PostgreSQL — relational database and analytical layer.
-* pgAdmin — database management and query interface.
-* Python (pandas, SQLAlchemy) — data ingestion from CSV to Postgres.
-* Tableau Public — interactive dashboard and visualizations.
+## Key Findings
+
+- **Delivery delays hurt ratings significantly.** Late orders averaged 2.5 stars vs. 4.2 stars for on-time orders across all 27 states.
+- **Revenue grew 11x in 18 months.** From ~$88K/month in Jan 2017 to ~$1M/month by mid-2018, with a 63% MoM spike in November 2017 (Black Friday).
+- **Southeast Brazil dominates.** São Paulo, Minas Gerais, and Rio de Janeiro lead both order volume and revenue.
+
 ---
-### Data Pipeline
 
-1. Download — 9 CSV files downloaded from Kaggle.
-1. Ingest — Python/pandas script auto-creates tables and loads all CSVs into Postgres in one pass.
-1. Model — SQL views built on top of raw tables to create a clean analytical layer.
-1. Visualize — View exports loaded into Tableau Public as a single master CSV.
+## Tech Stack
+
+| Tool | Purpose |
+|---|---|
+| PostgreSQL | Relational database and analytical layer |
+| pgAdmin | Database management and query interface |
+| Python (pandas, SQLAlchemy) | Data ingestion from CSV to Postgres |
+| Tableau Public | Interactive dashboard and visualizations |
+
 ---
-### Data Modeling Decisions
 
-Before building any analysis, I identified data quality issues that required deliberate modeling decisions:
-1. Multiple reviews per order: </br>
-The Olist platform allows customers to leave multiple reviews on the same order. One order had as many as 29 reviews attached to it. Joining the raw reviews table directly caused row fan-out, duplicating order rows and inflating all downstream metrics. *Fix: Pre-aggregated reviews in a CTE using DISTINCT ON (order_id), retaining only the most recent review per order.*
+## Business Questions
 
-2. Multiple payment rows per order
-Orders can be split across multiple payment methods or vouchers. One order had 29 separate voucher payment entries. Same fan-out issue.
-*Fix: Pre-aggregated payments in a CTE, summing all payment values and consolidating payment types per order.*
+1. How did revenue and order volume trend over time?
+2. How did delivery performance affect customer satisfaction?
+3. Which Brazilian states drove the highest order volume and revenue?
 
-3. Filtering to delivered orders only
-8 order statuses exist in the dataset — delivered, shipped, cancelled, unavailable, invoiced, processing, created, and approved. 97% of orders are delivered. All revenue analysis is scoped to delivered orders only to ensure accurate metrics.
-
-4. Date range scoping
-Since 2016 data contains only a handful of orders, all dashboards and trend analysis start from January 2017 for a clean and consistent time series.
 ---
-### SQL Views</br>
-<ins>v_orders_complete</ins></br>
-Base view, one clean row per order joining orders, customers, order items, payments (aggregated), and reviews (aggregated). Foundation for all downstream views and analysis.
 
-<ins>v_monthly_revenue</ins></br>
+## Data Pipeline
+
+```
+Kaggle CSVs -> Python ingest -> PostgreSQL views -> Tableau dashboard
+```
+
+1. **Download.** Retrieved 9 CSV files from Kaggle.
+2. **Ingest.** Used pandas + SQLAlchemy to load raw CSVs into PostgreSQL.
+3. **Model.** Built SQL views to create a clean analytical layer.
+4. **Visualize.** Exported master view to Tableau Public.
+
+---
+
+## Data Modeling Decisions
+
+**Deduplicating reviews.** Some orders had up to 29 review records. To avoid inflating metrics, a CTE with `DISTINCT ON (order_id)` retains only the most recent review per order.
+
+**Aggregating payments.** Orders with split payments or vouchers produced multiple payment rows. Payments are pre-aggregated in a CTE to sum values and consolidate payment types at the order level.
+
+**Delivered orders only.** 97% of orders were delivered, so revenue analysis is scoped to delivered orders only to keep metrics consistent.
+
+**Time-series start date.** 2016 data is sparse, so trend analysis begins in January 2017 for a cleaner, more reliable time series.
+
+---
+
+## SQL Views
+
+### `v_orders_complete`
+Base view. One clean row per order, joining orders, customers, items, aggregated payments, and aggregated reviews. Foundation for all downstream views.
+
+### `v_monthly_revenue`
 Monthly revenue, order count, average order value, and average review score broken down by customer state. Powers the revenue trend and geo dashboards.
 
-<ins>v_delivery_performance</ins></br>
-Actual vs estimated delivery days, delay days, on-time/late classification, and review score per order. Powers the delivery and satisfaction analysis.
+### `v_delivery_performance`
+Actual vs. estimated delivery days, delay days, on-time/late classification, and review score per order. Powers the delivery and satisfaction analysis.
 
-<ins>v_master_dashboard</ins></br>
-Single denormalized view combining all key fields from the above views into one table for Tableau ingestion.
+### `v_master_dashboard`
+Single denormalized view combining all key fields from the above views for direct Tableau ingestion.
+
 ---
-### Key Findings
-1. Consistent revenue growth with a Black Friday spike</br>
 
-   E-commerce revenue accelerated rapidly over the observed period, growing from approximately $88K/month in January 2017 to nearly $1M/month by mid-2018, representing more than 11x growth in under 18 months. November 2017 shows a pronounced surge, with 7,289 orders compared to 4,478 orders in the previous month, reinforcing a strong seasonal spike in holiday demand.</br>
-**Business implication:** Inventory planning and marketing spend should be strategically increased ahead of November to capture this predictable surge in demand. The sustained high-growth trajectory further supports continued investment in the e-commerce platform to capitalize on scaling opportunities.
+## Business Impact
 
-2. Southeast Brazil dominates e-commerce activity</br> 
-    Mapping revenue by state reveals a clear concentration in Southeast Brazil. São Paulo (SP), Minas Gerais (MG), and Rio de Janeiro (RJ) lead in both order volume and revenue.
-   </br>**Business implication:** Logistics infrastructure, seller acquisition, and marketing efforts should be prioritized in the Southeast while identifying growth opportunities in underserved states.
+### Delivery delays strongly reduce customer satisfaction
+Late orders averaged **2.5 stars** vs. **4.2 stars** for on-time orders across all 27 Brazilian states. Improving delivery reliability is one of the highest-leverage levers for improving customer ratings and retention.
+
+### Revenue scaled rapidly with a predictable holiday spike
+Revenue grew from ~$88K/month in January 2017 to ~$1M/month by mid-2018. November 2017 saw a major Black Friday / Cyber Monday surge: 7,289 orders vs. 4,478 the prior month (+63% MoM). Inventory and marketing spend should increase ahead of November each year.
+
+### Southeast Brazil drives order volume and revenue
+São Paulo, Minas Gerais, and Rio de Janeiro lead on both metrics. Logistics investment, seller expansion, and marketing should prioritize these high-demand markets.
+
 ---
-### How to Run Locally
-Prerequisites:
+
+## Dashboard Preview
+
+![Olist Tableau Dashboard](dashboard_preview.png)
+
+---
+
+## Running Locally
+
+### Prerequisites
 - PostgreSQL installed and running
 - Python 3 with pip
-- Tableau Public
+- Tableau Public (free)
 
-````
-# The ingestion script uses pandas to read each CSV and SQLAlchemy to 
-automatically create and populate the corresponding Postgres tables.
-Update the password and csv_folder path in scripts/load_data.py before running.
+### Setup
 
+```bash
 # Clone the repo
 git clone https://github.com/yourusername/olist-ecommerce-analysis.git
 cd olist-ecommerce-analysis
 
-# Create virtual environment
+# Create and activate a virtual environment
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate      # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install pandas sqlalchemy psycopg2-binary
 
-# Create database in pgAdmin or psql
+# Create the database
 createdb olist_db
 
-# Download Olist dataset from Kaggle and place CSVs in data/raw/
+# Download the Olist dataset from Kaggle and place CSVs in data/raw/
 # https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce
 
-# Run ingestion script
-````
----
-### Future Analysis
-This project is just scratching the surface. </br>Future directions include:
+# Update the connection string and csv_folder path in scripts/load_data.py
+# then run the ingestion script
+python scripts/load_data.py
+```
 
-- **Product category analysis:** Which categories drive the most revenue and which have the lowest satisfaction scores?.
-- **Seller performance analysis:** top sellers by revenue, rating, and on-time delivery rate.
-- **More current data:** analyzing trends beyond 2018 to understand how the market has evolved.
+The ingestion script uses pandas to read each CSV and SQLAlchemy to automatically create and populate the corresponding Postgres tables.
+
+---
+
+## Future Directions
+
+- **Product category analysis.** Which categories drive the most revenue, and which have the lowest satisfaction scores?
+- **Seller performance.** Top sellers by revenue, rating, and on-time delivery rate.
+- **Post-2018 data.** Understanding how the Brazilian e-commerce market has evolved since the dataset ends.e
 ---
 Built by: Brandon Trautner - [LinkedIn](https://www.linkedin.com/in/brandontrautner/) | [Tableau Public](https://public.tableau.com/app/profile/brandon.trautner/vizzes)
 
